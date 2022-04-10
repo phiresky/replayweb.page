@@ -53,6 +53,7 @@ const electronMainConfig = (/*env, argv*/) => {
     },
     optimization,
     resolve: {
+      extensions: [".ts", "..."],
       alias: {
         "abort-controller": "abort-controller/dist/abort-controller.js",
         "dlv": "dlv/dist/dlv.js",
@@ -93,7 +94,7 @@ const electronMainConfig = (/*env, argv*/) => {
 const electronPreloadConfig = (/*env, argv*/) => {
   return {
     target: "electron-preload",
-    mode: "production",
+    mode: production ? "production" : "development",
     entry: {
       "preload": "./src/electron-preload.js", 
     },
@@ -112,17 +113,20 @@ const electronPreloadConfig = (/*env, argv*/) => {
  
  
 
-const browserConfig = (/*env, argv*/) => {
+const browserConfig = (isWorker) => {
   return {
-    target: "web",
+    name: "foo",
+    target: isWorker ? "webworker": "web",
     mode: "production",
-    entry: {
+    entry: isWorker ? {"sw": "./src/sw.js"} : {
       "ui": "./src/ui.js",
-      "sw": "./src/sw.js"
     },
 
     optimization,
-    resolve: {fallback},
+    resolve: {
+      extensions: [".ts", "..."],
+      fallback
+    },
 
     output: {
       path: path.join(__dirname),
@@ -136,11 +140,16 @@ const browserConfig = (/*env, argv*/) => {
       electron: "electron",
     },
 
-    devServer: {
+    devServer: isWorker ? undefined : {
       compress: true,
       port: 9990,
       open: false,
       static:  path.join(__dirname),
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization, Range"
+      }
       //publicPath: "/"
     },
 
@@ -160,7 +169,7 @@ const browserConfig = (/*env, argv*/) => {
         __VERSION__: JSON.stringify(package_json.version),
         __IPFS_CORE_URL__: JSON.stringify(IPFS_CORE_URL)
       }),
-      new webpack.BannerPlugin(BANNER_TEXT),
+      new webpack.BannerPlugin({banner: BANNER_TEXT, exclude: /\.wasm$/}),
       new CopyPlugin({
         patterns: [
           { from: "node_modules/ipfs-core/dist/index.min.js", to: "ipfs-core.min.js" },
@@ -182,12 +191,16 @@ const browserConfig = (/*env, argv*/) => {
         {
           test: /wombat.js|wombatWorkers.js|index.html$/i,
           use: ["raw-loader"],
+        },
+        {
+          test: /\.tsx?$/,
+          use: "ts-loader",
+          exclude: /node_modules/
         }
       ]
     },
   };
 };
-
-module.exports = [ browserConfig, electronMainConfig, electronPreloadConfig ];
+module.exports = [browserConfig(false), browserConfig(true), electronMainConfig, electronPreloadConfig ];
 
 

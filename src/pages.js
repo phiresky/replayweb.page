@@ -170,7 +170,9 @@ class Pages extends LitElement
       this.changeNeeded = true;
     }
     this.loading = true;
-    if (this.flex && this.query && this.textPages) {
+    if (this.query && true) {
+      await this.sqliteFtsSearch(this.query);
+    } else if (this.flex && this.query && this.textPages) {
       const results = await this.flex.searchAsync(this.query, 25);
       this.filteredPages = results.map(inx => this.textPages[inx]);
     } else {
@@ -223,6 +225,33 @@ class Pages extends LitElement
       }
       return flex.addAsync(index, text);
     }));
+  }
+
+  async sqliteFtsSearch(matchString) {
+    this.loading = false; // hack: live rendering
+    this.errorMessage = null;
+    const url = new URL(`${this.collInfo.apiPrefix}/sqliteFtsSearch`, window.location);
+    url.searchParams.set("matchString", matchString);
+    url.searchParams.set("limit", 10);
+    const resp = await fetch(url);
+    let totalFetchedBytes = 0;
+    this.filteredPages = [];
+    let totalRequests = 0;
+    for await (const line of ndjson(resp.body.getReader())) {
+      console.log("resp line", line);
+      if(line.type === "row") {
+        this.filteredPages = [... this.filteredPages, line.row];
+        // this.filteredPages.push(line.row);
+        // this.sortedPages.push(line.row);
+      } else if(line.type === "progress") {
+        totalFetchedBytes += line.progress.fetchBytes;
+        totalRequests += 1;
+        console.log("total fetched bytes", (totalFetchedBytes / 1000).toFixed(0), "kB", "total requests", totalRequests);
+      } else if(line.type === "error") {
+        console.error("got error response", line.message);
+        this.errorMessage = line.message;
+      }
+    }
   }
 
   async updateTextSearch() {
@@ -679,6 +708,7 @@ class Pages extends LitElement
       ${this.renderPageHeader()}
       </div>
       <ul class="scroller" @scroll="${this.onScroll}">
+        ${this.errorMessage ? html`<p class="mobile-header">${this.errorMessage}</p>`: ""}
         ${this.sortedPages.length ? html`
           ${this.sortedPages.map((p, i) => {
     const selected = this.selectedPages.has(p.id);
