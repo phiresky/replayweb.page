@@ -34,20 +34,22 @@ const fallback = {
   "process": false
 };
 
-const optimization = {
+const production = process.env.NODE_ENV !== "development";
+
+const optimization = production ? {
   minimize: true,
   minimizer: [
     new TerserPlugin({
       extractComments: false,
     }),
   ],
-};
+} : {};
 
 
 const electronMainConfig = (/*env, argv*/) => {
   return {
     target: "electron-main",
-    mode: "production",
+    mode: production ? "production" : "development",
     entry: {
       "electron": "./src/electron-main.js", 
     },

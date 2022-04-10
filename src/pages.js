@@ -20,6 +20,7 @@ class Pages extends LitElement
 {
   constructor() {
     super();
+    Object.assign(window, {pages: this});
     this.filteredPages = [];
     this.sortedPages = [];
     this.query = "";
