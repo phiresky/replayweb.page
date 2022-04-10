@@ -135,7 +135,7 @@ const browserConfig = (isWorker) => {
       filename: "[name].js",
       libraryTarget: "self",
       globalObject: "self",
-      publicPath: "/"
+      publicPath: "/replayweb.page/"
     },
 
     externals: {
@@ -151,8 +151,8 @@ const browserConfig = (isWorker) => {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
         "Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization, Range"
-      }
-      //publicPath: "/"
+      },
+      publicPath: "/replayweb.page/"
     },
 
     plugins: [
